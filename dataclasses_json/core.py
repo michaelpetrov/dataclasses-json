@@ -193,7 +193,7 @@ def _decode_dataclass(cls, kvs, infer_missing):
             else:
                 init_kwargs[field.name] = overrides[field.name].decoder(
                     field_value)
-        elif is_dataclass(field_type):
+        elif _is_dataclass_cached(field_type):
             # FIXME this is a band-aid to deal with the value already being
             # serialized when handling nested marshmallow schema
             # proper fix is to investigate the marshmallow schema generation
@@ -277,7 +277,7 @@ def _decode_generic(type_, value, infer_missing):
             res = value
         elif _is_optional(type_) and len(type_.__args__) == 2:  # Optional
             type_arg = type_.__args__[0]
-            if is_dataclass(type_arg) or is_dataclass(value):
+            if _is_dataclass_cached(type_arg) or is_dataclass(value):
                 res = _decode_dataclass(type_arg, value, infer_missing)
             elif _is_supported_generic(type_arg):
                 res = _decode_generic(type_arg, value, infer_missing)
@@ -310,6 +310,10 @@ def _decode_dict_keys(key_type, xs, infer_missing):
 
     return map(decode_function, _decode_items(key_type, xs, infer_missing))
 
+@lru_cache(maxsize=None)
+def _is_dataclass_cached(type_arg) -> bool:
+    """ WARNING: only safe to use on types that you know are hashable """
+    return is_dataclass(type_arg)
 
 def _decode_items(type_arg, xs, infer_missing):
     """
@@ -321,7 +325,7 @@ def _decode_items(type_arg, xs, infer_missing):
     type_arg is a typevar we need to extract the reified type information
     hence the check of `is_dataclass(vs)`
     """
-    if is_dataclass(type_arg) or is_dataclass(xs):
+    if _is_dataclass_cached(type_arg) or is_dataclass(xs):
         items = (_decode_dataclass(type_arg, x, infer_missing)
                  for x in xs)
     elif _is_supported_generic(type_arg):
