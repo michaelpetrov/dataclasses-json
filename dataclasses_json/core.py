@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Collection, Mapping, Union, get_type_hints, Tuple
+from functools import lru_cache
 from uuid import UUID
 
 from typing_inspect import is_union_type  # type: ignore
@@ -50,6 +51,7 @@ class _ExtendedEncoder(json.JSONEncoder):
         return result
 
 
+@lru_cache(maxsize=None)
 def _user_overrides_or_exts(cls):
     global_metadata = defaultdict(dict)
     encoders = cfg.global_config.encoders
@@ -127,6 +129,11 @@ def _decode_letter_case_overrides(field_names, overrides):
     return names
 
 
+@lru_cache(maxsize=None)
+def _get_type_hints(cls):
+    return get_type_hints(cls)
+
+
 def _decode_dataclass(cls, kvs, infer_missing):
     if _isinstance_safe(kvs, cls):
         return kvs
@@ -149,7 +156,7 @@ def _decode_dataclass(cls, kvs, infer_missing):
     kvs = _handle_undefined_parameters_safe(cls, kvs, usage="from")
 
     init_kwargs = {}
-    types = get_type_hints(cls)
+    types = _get_type_hints(cls)
     for field in fields(cls):
         # The field should be skipped from being added
         # to init_kwargs as it's not intended as a constructor argument.
@@ -231,6 +238,7 @@ def _support_extended_types(field_type, field_value):
     return res
 
 
+@lru_cache(maxsize=None)
 def _is_supported_generic(type_):
     not_str = not _issubclass_safe(type_, str)
     is_enum = _issubclass_safe(type_, Enum)
