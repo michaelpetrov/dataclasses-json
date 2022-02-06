@@ -2,8 +2,10 @@ import inspect
 import sys
 from datetime import datetime, timezone
 from typing import Collection, Mapping, Optional, TypeVar, Any
+from functools import lru_cache
 
 
+@lru_cache(maxsize=None)
 def _get_type_cons(type_):
     """More spaghetti logic for 3.6 vs. 3.7"""
     if sys.version_info.minor == 6:
@@ -26,6 +28,7 @@ def _get_type_cons(type_):
     return cons
 
 
+@lru_cache(maxsize=None)
 def _get_type_origin(type_):
     """Some spaghetti logic to accommodate differences between 3.6 and 3.7 in
     the typing api"""
@@ -67,6 +70,7 @@ def _isinstance_safe(o, t):
         return result
 
 
+@lru_cache(maxsize=None)
 def _issubclass_safe(cls, classinfo):
     try:
         return issubclass(cls, classinfo)
@@ -88,24 +92,29 @@ def _is_new_type_subclass_safe(cls, classinfo):
         return False
 
 
+@lru_cache(maxsize=None)
 def _is_new_type(type_):
     return inspect.isfunction(type_) and hasattr(type_, "__supertype__")
 
 
+@lru_cache(maxsize=None)
 def _is_optional(type_):
     return (_issubclass_safe(type_, Optional) or
             _hasargs(type_, type(None)) or
             type_ is Any)
 
 
+@lru_cache(maxsize=None)
 def _is_mapping(type_):
     return _issubclass_safe(_get_type_origin(type_), Mapping)
 
 
+@lru_cache(maxsize=None)
 def _is_collection(type_):
     return _issubclass_safe(_get_type_origin(type_), Collection)
 
 
+@lru_cache(maxsize=None)
 def _is_nonstr_collection(type_):
     return (_issubclass_safe(_get_type_origin(type_), Collection)
             and not _issubclass_safe(type_, str))
@@ -117,6 +126,7 @@ def _timestamp_to_dt_aware(timestamp: float):
     return dt
 
 
+@lru_cache(maxsize=None)
 def _undefined_parameter_action_safe(cls):
     try:
         if cls.dataclass_json_config is None:
@@ -137,7 +147,6 @@ def _handle_undefined_parameters_safe(cls, kvs, usage: str):
     according action.
     """
     undefined_parameter_action = _undefined_parameter_action_safe(cls)
-    usage = usage.lower()
     if undefined_parameter_action is None:
         return kvs if usage != "init" else cls.__init__
     if usage == "from":

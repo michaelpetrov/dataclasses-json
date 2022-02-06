@@ -57,7 +57,7 @@ def _user_overrides_or_exts(cls):
     encoders = cfg.global_config.encoders
     decoders = cfg.global_config.decoders
     mm_fields = cfg.global_config.mm_fields
-    for field in fields(cls):
+    for field in _fields(cls):
         if field.type in encoders:
             global_metadata[field.name]['encoder'] = encoders[field.type]
         if field.type in decoders:
@@ -71,7 +71,7 @@ def _user_overrides_or_exts(cls):
         cls_config = {}
 
     overrides = {}
-    for field in fields(cls):
+    for field in _fields(cls):
         field_config = {}
         # first apply global overrides or extensions
         field_metadata = global_metadata[field.name]
@@ -134,15 +134,19 @@ def _get_type_hints(cls):
     return get_type_hints(cls)
 
 
+@lru_cache(maxsize=None)
+def _fields(cls):
+    return fields(cls)
+
 def _decode_dataclass(cls, kvs, infer_missing):
     if _isinstance_safe(kvs, cls):
         return kvs
     overrides = _user_overrides_or_exts(cls)
     kvs = {} if kvs is None and infer_missing else kvs
-    field_names = [field.name for field in fields(cls)]
+    field_names = [field.name for field in _fields(cls)]
     decode_names = _decode_letter_case_overrides(field_names, overrides)
     kvs = {decode_names.get(k, k): v for k, v in kvs.items()}
-    missing_fields = {field for field in fields(cls) if field.name not in kvs}
+    missing_fields = {field for field in _fields(cls) if field.name not in kvs}
 
     for field in missing_fields:
         if field.default is not MISSING:
@@ -157,7 +161,7 @@ def _decode_dataclass(cls, kvs, infer_missing):
 
     init_kwargs = {}
     types = _get_type_hints(cls)
-    for field in fields(cls):
+    for field in _fields(cls):
         # The field should be skipped from being added
         # to init_kwargs as it's not intended as a constructor argument.
         if not field.init:
@@ -343,7 +347,7 @@ def _asdict(obj, encode_json=False):
     if _is_dataclass_instance(obj):
         result = []
         overrides = _user_overrides_or_exts(obj)
-        for field in fields(obj):
+        for field in _fields(obj):
             if overrides[field.name].encoder:
                 value = getattr(obj, field.name)
             else:
