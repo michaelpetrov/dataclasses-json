@@ -51,13 +51,12 @@ class _ExtendedEncoder(json.JSONEncoder):
         return result
 
 
-@lru_cache(maxsize=None)
-def _user_overrides_or_exts(cls):
+def _user_overrides_or_exts(cls_or_obj):
     global_metadata = defaultdict(dict)
     encoders = cfg.global_config.encoders
     decoders = cfg.global_config.decoders
     mm_fields = cfg.global_config.mm_fields
-    for field in _fields(cls):
+    for field in fields(cls_or_obj):
         if field.type in encoders:
             global_metadata[field.name]['encoder'] = encoders[field.type]
         if field.type in decoders:
@@ -65,13 +64,13 @@ def _user_overrides_or_exts(cls):
         if field.type in mm_fields:
             global_metadata[field.name]['mm_fields'] = mm_fields[field.type]
     try:
-        cls_config = (cls.dataclass_json_config
-                      if cls.dataclass_json_config is not None else {})
+        cls_config = (cls_or_obj.dataclass_json_config
+                      if cls_or_obj.dataclass_json_config is not None else {})
     except AttributeError:
         cls_config = {}
 
     overrides = {}
-    for field in _fields(cls):
+    for field in fields(cls_or_obj):
         field_config = {}
         # first apply global overrides or extensions
         field_metadata = global_metadata[field.name]
@@ -347,7 +346,7 @@ def _asdict(obj, encode_json=False):
     if _is_dataclass_instance(obj):
         result = []
         overrides = _user_overrides_or_exts(obj)
-        for field in _fields(obj):
+        for field in fields(obj):
             if overrides[field.name].encoder:
                 value = getattr(obj, field.name)
             else:

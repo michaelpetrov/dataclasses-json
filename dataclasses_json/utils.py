@@ -126,12 +126,11 @@ def _timestamp_to_dt_aware(timestamp: float):
     return dt
 
 
-@lru_cache(maxsize=None)
-def _undefined_parameter_action_safe(cls):
+def _undefined_parameter_action_safe(cls_or_object):
     try:
-        if cls.dataclass_json_config is None:
+        if cls_or_object.dataclass_json_config is None:
             return
-        action_enum = cls.dataclass_json_config['undefined']
+        action_enum = cls_or_object.dataclass_json_config['undefined']
     except (AttributeError, KeyError):
         return
 
